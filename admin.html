@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <title>Адмін-Панель | TOOLS</title>
+    <style>
+        * { box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { background: #f4f4f4; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; display: none; }
+        .card { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #ddd; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; font-weight: bold; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #ffe800; border: none; padding: 10px 15px; font-weight: bold; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #ffd700; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #222; color: #fff; }
+        .btn-edit { background: #2196F3; color: #fff; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; margin-right: 5px; }
+        .btn-delete { background: #ff4d4d; color: #fff; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; }
+        
+        #login-modal {
+            max-width: 400px; margin: 80px auto; background: #fff; padding: 30px;
+            border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); text-align: center;
+        }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content {
+            background: #fff; padding: 25px; border-radius: 8px; max-width: 550px; width: 90%; position: relative;
+            max-height: 90vh; overflow-y: auto;
+        }
+        .close-btn { position: absolute; right: 15px; top: 10px; font-size: 24px; cursor: pointer; font-weight: bold; line-height: 1; }
+
+        .photo-gallery {
+            display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px;
+        }
+        .photo-item {
+            position: relative; width: 75px; height: 75px; border: 1px solid #ccc; border-radius: 4px; overflow: hidden;
+        }
+        .photo-item img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .photo-item .remove-img-btn {
+            position: absolute; top: 2px; right: 2px; background: rgba(255, 0, 0, 0.85); color: #fff;
+            border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ВІКНО ВХОДУ -->
+    <div id="login-modal">
+        <h2>Вхід в Адмін-Панель</h2>
+        <div class="form-group" style="text-align: left; margin-top: 20px;">
+            <label>Пароль адміністратора:</label>
+            <input type="password" id="admin-pass" placeholder="Введіть пароль">
+        </div>
+        <p id="login-error" style="color: red; display: none;">Невірний пароль!</p>
+        <button onclick="checkPassword()" style="width: 100%; padding: 12px; margin-top: 10px;">Увійти</button>
+    </div>
+
+    <!-- ОСНОВНИЙ ІНТЕРФЕЙС АДМІНКИ -->
+    <div class="container" id="admin-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h1>Панель управління TOOLS</h1>
+            <button onclick="logout()" style="background: #e0e0e0;">Вийти</button>
+        </div>
+        
+        <!-- Додавання товару -->
+        <div class="card">
+            <h2>Додати новий товар</h2>
+            <form id="add-product-form" onsubmit="addProduct(event)">
+                <div class="form-group">
+                    <label>Назва товару:</label>
+                    <input type="text" id="p-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Категорія:</label>
+                    <select id="p-category" required>
+                        <option value="Електроінструменти">Електроінструменти</option>
+                        <option value="Акумуляторні інструменти">Акумуляторні інструменти</option>
+                        <option value="Ручний інструмент">Ручний інструмент</option>
+                        <option value="Інструмент електрика">Пневматичні інструменти</option>
+                        <option value="Лазерні рівні">Лазерні рівні</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Бренд:</label>
+                    <input type="text" id="p-brand" required placeholder="Bosch, DeWalt, RIDGID, Makita...">
+                </div>
+                <div class="form-group">
+                    <label>Ціна (грн):</label>
+                    <input type="number" id="p-price" required>
+                </div>
+                <div class="form-group">
+                    <label>Опис товару:</label>
+                    <textarea id="p-desc" rows="3" placeholder="Короткий опис товару..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Фотографії товару (можна виділити декілька):</label>
+                    <input type="file" id="p-images" accept="image/*" multiple style="padding: 5px;">
+                </div>
+
+                <button type="submit">Зберегти товар</button>
+            </form>
+        </div>
+
+        <!-- Замовлення -->
+        <div class="card">
+            <h2>Замовлення від покупців</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>Клієнт</th>
+                        <th>Телефон</th>
+                        <th>Адреса</th>
+                        <th>Товари</th>
+                        <th>Сума</th>
+                    </tr>
+                </thead>
+                <tbody id="orders-table"></tbody>
+            </table>
+        </div>
+
+        <!-- Товари -->
+        <div class="card">
+            <h2>Усі товари в базі</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Назва</th>
+                        <th>Категорія</th>
+                        <th>Ціна</th>
+                        <th>Дія</th>
+                    </tr>
+                </thead>
+                <tbody id="products-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНЕ ВІКНО РЕДАГУВАННЯ ТОВАРА -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-modal-btn">&times;</span>
+            <h2>Редагувати товар</h2>
+            <form id="edit-product-form">
+                <input type="hidden" id="edit-p-id">
+                
+                <div class="form-group">
+                    <label>Назва товару:</label>
+                    <input type="text" id="edit-p-name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Категорія:</label>
+                    <select id="edit-p-category" required>
+                        <option value="Електроінструменти">Електроінструменти</option>
+                        <option value="Акумуляторні інструменти">Акумуляторні інструменти</option>
+                        <option value="Ручний інструмент">Ручний інструмент</option>
+                        <option value="Інструмент електрика">Пневматичні інструменти</option>
+                        <option value="Лазерні рівні">Лазерні рівні</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Бренд:</label>
+                    <input type="text" id="edit-p-brand" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Ціна (грн):</label>
+                    <input type="number" id="edit-p-price" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Опис товару:</label>
+                    <textarea id="edit-p-desc" rows="3" placeholder="Опис товару..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Поточні фотографії товару:</label>
+                    <div id="current-photos-gallery" class="photo-gallery"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Додати ще фотографії (для вибору кількох):</label>
+                    <input type="file" id="edit-p-images" accept="image/*" multiple style="padding: 5px;">
+                </div>
+                
+                <button type="submit" style="width: 100%; margin-top: 10px;">Зберегти зміни</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    const SECRET_PASS = "admin123"; 
+    window.allProductsData = [];
+    let currentEditingImages = [];
+
+    // Допоміжна функція отримання ролі поточного користувача
+    function getUserRole() {
+        try {
+            const user = JSON.parse(localStorage.getItem('user'));
+            return user && user.role ? user.role : 'admin'; // За замовчуванням у панелі адміна 'admin'
+        } catch (e) {
+            return 'admin';
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        if (sessionStorage.getItem("admin_auth") === "true") {
+            showAdmin();
+        }
+
+        document.getElementById('close-modal-btn').addEventListener('click', closeEditModal);
+
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('edit-modal');
+            if (e.target === modal) {
+                closeEditModal();
+            }
+        });
+
+        document.getElementById('edit-product-form').addEventListener('submit', saveEditedProduct);
+    });
+
+    function checkPassword() {
+        const pass = document.getElementById("admin-pass").value;
+        if (pass === SECRET_PASS) {
+            sessionStorage.setItem("admin_auth", "true");
+            // Якщо роль у localStorage відсутня, встановлюємо адмінську
+            const user = JSON.parse(localStorage.getItem('user')) || {};
+            user.role = user.role || 'admin';
+            localStorage.setItem('user', JSON.stringify(user));
+            showAdmin();
+        } else {
+            document.getElementById("login-error").style.display = "block";
+        }
+    }
+
+    function showAdmin() {
+        document.getElementById("login-modal").style.display = "none";
+        document.getElementById("admin-content").style.display = "block";
+        loadProducts();
+        loadOrders();
+    }
+
+    function logout() {
+        sessionStorage.removeItem("admin_auth");
+        location.reload();
+    }
+
+    function loadProducts() {
+        fetch('/api/products')
+            .then(res => res.json())
+            .then(data => {
+                window.allProductsData = data;
+                renderTable(data);
+            })
+            .catch(err => console.error("Помилка завантаження товарів:", err));
+    }
+
+    function renderTable(data) {
+        const tbody = document.getElementById('products-table');
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Немає товарів</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = data.map((p, index) => `
+            <tr>
+                <td>${p.id || index + 1}</td>
+                <td>${p.name}</td>
+                <td>${p.category}</td>
+                <td>${p.price} ₴</td>
+                <td>
+                    <button class="btn-edit" onclick="openEditModal(${p.id})">✏️ Змінити</button>
+                    <button class="btn-delete" onclick="deleteProduct(${p.id})">Видалити</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function loadOrders() {
+        fetch('/api/orders', {
+            headers: {
+                'x-user-role': getUserRole()
+            }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error("Недостатньо прав для перегляду замовлень");
+                return res.json();
+            })
+            .then(orders => {
+                const tableBody = document.getElementById('orders-table');
+                if (!tableBody) return;
+
+                if (!orders || orders.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #777;">Замовлень поки немає</td></tr>`;
+                    return;
+                }
+
+                tableBody.innerHTML = orders.map((o, index) => {
+                    let itemsList = [];
+                    try { itemsList = JSON.parse(o.items); } catch(e) {}
+                    let itemsStr = Array.isArray(itemsList) ? itemsList.map(i => `${i.name} (${i.qty} шт)`).join(', ') : 'Товари';
+                    
+                    return `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${o.customer_name || '—'}</td>
+                            <td>${o.phone || '—'}</td>
+                            <td>${o.address || '—'}</td>
+                            <td>${itemsStr}</td>
+                            <td><strong>${o.total_price || 0} ₴</strong></td>
+                        </tr>
+                    `;
+                }).join('');
+            })
+            .catch(err => console.error("Помилка завантаження замовлень:", err));
+    }
+
+    function addProduct(e) {
+        e.preventDefault();
+
+        const formData = new FormData();
+        formData.append('name', document.getElementById('p-name').value);
+        formData.append('category', document.getElementById('p-category').value);
+        formData.append('brand', document.getElementById('p-brand').value);
+        formData.append('price', document.getElementById('p-price').value);
+        formData.append('description', document.getElementById('p-desc').value);
+
+        const filesInput = document.getElementById('p-images');
+        for (let i = 0; i < filesInput.files.length; i++) {
+            formData.append('images', filesInput.files[i]);
+        }
+
+        fetch('/api/products', {
+            method: 'POST',
+            headers: {
+                'x-user-role': getUserRole()
+            },
+            body: formData
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Помилка збереження (немає прав)');
+            return res.json();
+        })
+        .then(data => {
+            alert("Товар успішно додано та збережено в базу!");
+            document.getElementById('add-product-form').reset();
+            loadProducts();
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Не вдалося зберегти товар. Перевірте права доступу!");
+        });
+    }
+
+    function deleteProduct(id) {
+        if (confirm("Видалити товар?")) {
+            fetch(`/api/products/${id}`, { 
+                method: 'DELETE',
+                headers: {
+                    'x-user-role': getUserRole()
+                }
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error('Недостатньо прав для видалення');
+                    return res.json();
+                })
+                .then(() => {
+                    alert("Товар видалено!");
+                    loadProducts();
+                })
+                .catch(err => alert(`Помилка: ${err.message}`));
+        }
+    }
+
+    function openEditModal(id) {
+        const product = (window.allProductsData || []).find(p => p.id == id);
+        if (!product) return alert("Товар не знайдено!");
+
+        document.getElementById('edit-p-id').value = product.id;
+        document.getElementById('edit-p-name').value = product.name || '';
+        document.getElementById('edit-p-category').value = product.category || 'Електроінструменти';
+        document.getElementById('edit-p-brand').value = product.brand || '';
+        document.getElementById('edit-p-price').value = product.price || 0;
+        document.getElementById('edit-p-desc').value = product.description || '';
+
+        try {
+            currentEditingImages = JSON.parse(product.img);
+        } catch(e) {
+            currentEditingImages = product.img ? [product.img] : [];
+        }
+
+        renderCurrentPhotos();
+        document.getElementById('edit-modal').style.display = 'flex';
+    }
+
+    function renderCurrentPhotos() {
+        const container = document.getElementById('current-photos-gallery');
+        if (!currentEditingImages || currentEditingImages.length === 0) {
+            container.innerHTML = `<span style="color:#888; font-size:12px;">Немає завантажених фото</span>`;
+            return;
+        }
+
+        container.innerHTML = currentEditingImages.map((imgSrc, idx) => `
+            <div class="photo-item">
+                <img src="${imgSrc}" alt="Фото ${idx + 1}">
+                <button type="button" class="remove-img-btn" onclick="removePhoto(${idx})" title="Видалити це фото">&times;</button>
+            </div>
+        `).join('');
+    }
+
+    function removePhoto(index) {
+        currentEditingImages.splice(index, 1);
+        renderCurrentPhotos();
+    }
+
+    function closeEditModal() {
+        document.getElementById('edit-modal').style.display = 'none';
+        document.getElementById('edit-p-images').value = '';
+    }
+
+    function saveEditedProduct(e) {
+        e.preventDefault();
+        
+        const id = document.getElementById('edit-p-id').value;
+        const formData = new FormData();
+
+        formData.append('name', document.getElementById('edit-p-name').value);
+        formData.append('category', document.getElementById('edit-p-category').value);
+        formData.append('brand', document.getElementById('edit-p-brand').value);
+        formData.append('price', document.getElementById('edit-p-price').value);
+        formData.append('description', document.getElementById('edit-p-desc').value);
+        formData.append('existingImages', JSON.stringify(currentEditingImages));
+
+        const filesInput = document.getElementById('edit-p-images');
+        for (let i = 0; i < filesInput.files.length; i++) {
+            formData.append('images', filesInput.files[i]);
+        }
+
+        fetch(`/api/products/${id}`, {
+            method: 'PUT',
+            headers: {
+                'x-user-role': getUserRole()
+            },
+            body: formData
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Помилка сервера при оновленні або недостатньо прав');
+            return res.json();
+        })
+        .then(data => {
+            alert("Зміни успішно збережено!");
+            closeEditModal();
+            loadProducts();
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Не вдалося зберегти зміни!");
+        });
+    }
+</script>
+</body>
+</html>
